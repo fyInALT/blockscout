@@ -400,7 +400,7 @@ ifdef HAS_BLOCKSCOUT_IMAGE
 	@echo "==> Image exist. Using $(BS_CONTAINER_IMAGE)"
 else
 	@echo "==> No image found, trying to build one..."
-	@docker build --build-arg COIN="$(COIN)" -f ./Dockerfile -t $(BS_CONTAINER_IMAGE) ../
+	@docker build --build-arg COIN="$(COIN)" --build-arg HTTPS_PROXY="$(HTTPS_PROXY)" -f ./Dockerfile -t $(BS_CONTAINER_IMAGE) ../
 endif
 
 migrate_only:

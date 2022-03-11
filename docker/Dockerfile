@@ -1,5 +1,11 @@
 FROM bitwalker/alpine-elixir-phoenix:1.12
 
+RUN git config --global https.proxy ${HTTPS_PROXY}
+RUN git config --global http.proxy ${HTTPS_PROXY}
+RUN echo "proxy = ${HTTPS_PROXY}" | tee $HOME/.curl >/dev/null 2>&1
+
+ENV HTTPS_PROXY ${HTTPS_PROXY}
+
 RUN apk --no-cache --update add alpine-sdk gmp-dev automake libtool inotify-tools autoconf python3 file
 
 ENV GLIBC_REPO=https://github.com/sgerrand/alpine-pkg-glibc
@@ -32,7 +38,11 @@ ADD apps/explorer/mix.exs ./apps/explorer/
 ADD apps/ethereum_jsonrpc/mix.exs ./apps/ethereum_jsonrpc/
 ADD apps/indexer/mix.exs ./apps/indexer/
 
-RUN mix do deps.get, local.rebar --force, deps.compile
+
+
+RUN HTTPS_PROXY="" HEX_MIRROR="https://hexpm.upyun.com" HEX_CDN="https://hexpm.upyun.com" HEX_HTTP_CONCURRENCY=3 HEX_HTTP_TIMEOUT=2400 mix do deps.get
+RUN HTTPS_PROXY="" HEX_MIRROR="https://hexpm.upyun.com" HEX_CDN="https://hexpm.upyun.com" mix do local.rebar --force
+RUN mix do deps.compile
 
 ADD . .
 
@@ -46,11 +56,11 @@ RUN if [ "$COIN" != "" ]; then \
 # Run forderground build and phoenix digest
 RUN mix compile
 
-RUN npm install npm@latest
+RUN npm install npm@latest --registry=https://registry.npmmirror.com
 
 # Add blockscout npm deps
 RUN cd apps/block_scout_web/assets/ && \
-    npm install && \
+    npm install --registry=https://registry.npmmirror.com && \
     npm run deploy && \
     cd -
 
@@ -59,3 +69,9 @@ RUN cd apps/explorer/ && \
     apk update && apk del --force-broken-world alpine-sdk gmp-dev automake libtool inotify-tools autoconf python3
 
 RUN mix phx.digest
+
+RUN rm -rf ~/.gitconfig
+RUN rm -rf ~/.curl
+
+ENV HTTPS_PROXY ""
+RUN echo "h $HTTP_PROXY"
